@@ -1,0 +1,462 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========================
+// ENUMS
+// ========================
+
+enum Role {
+  ADMIN
+  VETERINARIO
+  RECEPCION
+  CAJA
+}
+
+enum Species {
+  PERRO
+  GATO
+  AVE
+  REPTIL
+  ROEDOR
+  OTRO
+}
+
+enum Sex {
+  MACHO
+  HEMBRA
+}
+
+enum AppointmentStatus {
+  PENDIENTE
+  CONFIRMADA
+  ATENDIDA
+  CANCELADA
+}
+
+enum PaymentMethod {
+  EFECTIVO
+  TARJETA
+  TRANSFERENCIA
+}
+
+enum MovementType {
+  ENTRADA
+  SALIDA
+  AJUSTE
+}
+
+enum SaleStatus {
+  COMPLETADA
+  PENDIENTE
+  CANCELADA
+}
+
+enum HospitalizationStatus {
+  ACTIVA
+  ALTA
+  FALLECIDO
+}
+
+// ========================
+// MODELOS PRINCIPALES
+// ========================
+
+model Clinic {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique // Para subdominios: mi-clinica.vetclinic.com
+  address     String?
+  phone       String?
+  email       String?
+  logo        String?
+  rfc         String?  // Datos fiscales
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relaciones
+  users              User[]
+  clients            Client[]
+  pets               Pet[]
+  appointments       Appointment[]
+  medicalRecords     MedicalRecord[]
+  prescriptions      Prescription[]
+  products           Product[]
+  inventoryMovements InventoryMovement[]
+  sales              Sale[]
+  suppliers          Supplier[]
+  activityLogs       ActivityLog[]
+  hospitalizations   Hospitalization[]
+  vaccineReminders   VaccineReminder[]
+
+  @@map("clinics")
+}
+
+model User {
+  id             String   @id @default(uuid())
+  email          String
+  password       String
+  firstName      String
+  lastName       String
+  phone          String?
+  role           Role     @default(RECEPCION)
+  active         Boolean  @default(true)
+  refreshToken   String?
+  licenseNumber  String?  // Cédula profesional (veterinarios)
+  digitalSignature String? // Firma digital
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Multi-tenant
+  clinicId       String
+  clinic         Clinic   @relation(fields: [clinicId], references: [id])
+
+  // Relaciones
+  appointments   Appointment[]
+  medicalRecords MedicalRecord[]
+  prescriptions  Prescription[]
+  sales          Sale[]
+  activityLogs   ActivityLog[]
+
+  @@unique([email, clinicId])
+  @@map("users")
+}
+
+model Client {
+  id          String   @id @default(uuid())
+  firstName   String
+  lastName    String
+  email       String?
+  phone       String
+  phone2      String?
+  address     String?
+  city        String?
+  state       String?
+  zipCode     String?
+  notes       String?  // Notas internas
+  balance     Float    @default(0) // Estado de cuenta
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Multi-tenant
+  clinicId    String
+  clinic      Clinic   @relation(fields: [clinicId], references: [id])
+
+  // Relaciones
+  pets        Pet[]
+  sales       Sale[]
+
+  @@map("clients")
+}
+
+model Pet {
+  id            String   @id @default(uuid())
+  name          String
+  species       Species
+  breed         String?
+  sex           Sex
+  weight        Float?
+  birthDate     DateTime?
+  color         String?
+  microchip     String?
+  allergies     String?
+  photo         String?
+  active        Boolean  @default(true)
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relaciones
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id])
+  clinicId      String
+  clinic        Clinic   @relation(fields: [clinicId], references: [id])
+
+  appointments       Appointment[]
+  medicalRecords     MedicalRecord[]
+  prescriptions      Prescription[]
+  hospitalizations   Hospitalization[]
+  vaccineReminders   VaccineReminder[]
+
+  @@map("pets")
+}
+
+model Appointment {
+  id          String            @id @default(uuid())
+  date        DateTime
+  startTime   String            // "09:00"
+  endTime     String?           // "09:30"
+  reason      String
+  status      AppointmentStatus @default(PENDIENTE)
+  notes       String?
+  reminder    Boolean           @default(false) // Recordatorio enviado
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  // Relaciones
+  petId       String
+  pet         Pet       @relation(fields: [petId], references: [id])
+  vetId       String
+  vet         User      @relation(fields: [vetId], references: [id])
+  clinicId    String
+  clinic      Clinic    @relation(fields: [clinicId], references: [id])
+
+  medicalRecord MedicalRecord?
+
+  @@map("appointments")
+}
+
+model MedicalRecord {
+  id              String   @id @default(uuid())
+  consultDate     DateTime @default(now())
+  reason          String   // Motivo de consulta
+  symptoms        String?  // Síntomas
+  diagnosis       String?
+  treatment       String?
+  observations    String?
+  weight          Float?   // Peso al momento de consulta
+  temperature     Float?
+  heartRate       Int?
+  respiratoryRate Int?
+  attachments     String[] // URLs de archivos adjuntos
+  vetSignature    String?  // Firma digital del veterinario
+  evolution       String?  // Evolución médica
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relaciones
+  petId           String
+  pet             Pet      @relation(fields: [petId], references: [id])
+  vetId           String
+  vet             User     @relation(fields: [vetId], references: [id])
+  clinicId        String
+  clinic          Clinic   @relation(fields: [clinicId], references: [id])
+  appointmentId   String?  @unique
+  appointment     Appointment? @relation(fields: [appointmentId], references: [id])
+
+  prescriptions   Prescription[]
+
+  @@map("medical_records")
+}
+
+model Prescription {
+  id          String   @id @default(uuid())
+  medication  String
+  dosage      String
+  frequency   String
+  duration    String
+  instructions String?
+  createdAt   DateTime @default(now())
+
+  // Relaciones
+  medicalRecordId String
+  medicalRecord   MedicalRecord @relation(fields: [medicalRecordId], references: [id])
+  petId           String
+  pet             Pet           @relation(fields: [petId], references: [id])
+  vetId           String
+  vet             User          @relation(fields: [vetId], references: [id])
+  clinicId        String
+  clinic          Clinic        @relation(fields: [clinicId], references: [id])
+
+  @@map("prescriptions")
+}
+
+model Product {
+  id           String   @id @default(uuid())
+  name         String
+  description  String?
+  sku          String?
+  barcode      String?
+  category     String   // MEDICAMENTO, ALIMENTO, ACCESORIO, SERVICIO
+  price        Float
+  cost         Float    @default(0)
+  stock        Int      @default(0)
+  minStock     Int      @default(5)
+  unit         String   @default("pieza") // pieza, ml, kg
+  isService    Boolean  @default(false)
+  expiryDate   DateTime? // Caducidad
+  lot          String?   // Lote
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Multi-tenant
+  clinicId     String
+  clinic       Clinic   @relation(fields: [clinicId], references: [id])
+
+  // Relaciones
+  saleItems          SaleItem[]
+  inventoryMovements InventoryMovement[]
+  supplierProducts   SupplierProduct[]
+
+  @@map("products")
+}
+
+model Supplier {
+  id          String   @id @default(uuid())
+  name        String
+  contactName String?
+  email       String?
+  phone       String?
+  address     String?
+  rfc         String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Multi-tenant
+  clinicId    String
+  clinic      Clinic   @relation(fields: [clinicId], references: [id])
+
+  supplierProducts SupplierProduct[]
+
+  @@map("suppliers")
+}
+
+model SupplierProduct {
+  id         String   @id @default(uuid())
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  cost       Float?
+
+  @@unique([supplierId, productId])
+  @@map("supplier_products")
+}
+
+model InventoryMovement {
+  id        String       @id @default(uuid())
+  type      MovementType
+  quantity  Int
+  reason    String?
+  reference String?      // Referencia a venta, compra, etc.
+  createdAt DateTime     @default(now())
+
+  // Relaciones
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  clinicId  String
+  clinic    Clinic  @relation(fields: [clinicId], references: [id])
+
+  @@map("inventory_movements")
+}
+
+model Sale {
+  id            String       @id @default(uuid())
+  folio         String       // Folio de venta
+  subtotal      Float
+  tax           Float        @default(0)
+  discount      Float        @default(0)
+  total         Float
+  status        SaleStatus   @default(COMPLETADA)
+  notes         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Relaciones
+  clientId      String?
+  client        Client?  @relation(fields: [clientId], references: [id])
+  userId        String   // Cajero/vendedor
+  user          User     @relation(fields: [userId], references: [id])
+  clinicId      String
+  clinic        Clinic   @relation(fields: [clinicId], references: [id])
+
+  items         SaleItem[]
+  payments      Payment[]
+
+  @@map("sales")
+}
+
+model SaleItem {
+  id        String @id @default(uuid())
+  quantity  Int
+  unitPrice Float
+  discount  Float  @default(0)
+  total     Float
+
+  // Relaciones
+  saleId    String
+  sale      Sale    @relation(fields: [saleId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@map("sale_items")
+}
+
+model Payment {
+  id        String        @id @default(uuid())
+  amount    Float
+  method    PaymentMethod
+  reference String?       // Referencia de tarjeta/transferencia
+  createdAt DateTime      @default(now())
+
+  // Relaciones
+  saleId    String
+  sale      Sale @relation(fields: [saleId], references: [id])
+
+  @@map("payments")
+}
+
+model Hospitalization {
+  id          String                 @id @default(uuid())
+  admitDate   DateTime               @default(now())
+  dischargeDate DateTime?
+  reason      String
+  status      HospitalizationStatus  @default(ACTIVA)
+  notes       String?
+  dailyNotes  String[]               // Notas diarias de evolución
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  // Relaciones
+  petId       String
+  pet         Pet    @relation(fields: [petId], references: [id])
+  clinicId    String
+  clinic      Clinic @relation(fields: [clinicId], references: [id])
+
+  @@map("hospitalizations")
+}
+
+model VaccineReminder {
+  id          String   @id @default(uuid())
+  vaccineName String
+  dueDate     DateTime
+  sent        Boolean  @default(false)
+  sentAt      DateTime?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  // Relaciones
+  petId       String
+  pet         Pet    @relation(fields: [petId], references: [id])
+  clinicId    String
+  clinic      Clinic @relation(fields: [clinicId], references: [id])
+
+  @@map("vaccine_reminders")
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  action    String   // CREATE, UPDATE, DELETE, LOGIN, etc.
+  entity    String   // User, Client, Pet, etc.
+  entityId  String?
+  details   String?  // JSON con detalles
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  // Relaciones
+  userId    String
+  user      User   @relation(fields: [userId], references: [id])
+  clinicId  String
+  clinic    Clinic @relation(fields: [clinicId], references: [id])
+
+  @@map("activity_logs")
+}
