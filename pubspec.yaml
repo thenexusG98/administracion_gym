@@ -1,0 +1,65 @@
+name: valhalla_bjj
+description: Aplicación de administración para el gimnasio Valhalla BJJ
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+  flutter: '>=3.16.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State Management
+  flutter_riverpod: ^2.4.9
+  riverpod_annotation: ^2.3.3
+
+  # Database
+  sqflite: ^2.3.2
+  path: ^1.8.3
+  path_provider: ^2.1.2
+
+  # Google Services
+  googleapis: ^13.1.0
+  googleapis_auth: ^1.5.1
+  google_sign_in: ^6.2.1
+  http: ^1.2.1
+
+  # UI
+  fl_chart: ^0.66.2
+  intl: ^0.19.0
+  google_fonts: ^6.1.0
+
+  # Security
+  local_auth: ^2.1.8
+  flutter_secure_storage: ^9.0.0
+
+  # Notifications
+  flutter_local_notifications: ^17.0.0
+
+  # Utils
+  uuid: ^4.3.3
+  connectivity_plus: ^6.0.1
+  shared_preferences: ^2.2.2
+  collection: ^1.18.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+  riverpod_generator: ^2.3.9
+  build_runner: ^2.4.8
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+
+  # fonts:
+  #   - family: ValhallaIcons
+  #     fonts:
+  #       - asset: assets/fonts/ValhallaIcons.ttf
