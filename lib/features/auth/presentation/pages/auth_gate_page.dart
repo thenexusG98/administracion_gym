@@ -21,7 +21,7 @@ class _AuthGatePageState extends ConsumerState<AuthGatePage> {
   @override
   void initState() {
     super.initState();
-    _tryBiometric();
+    // La biometría se intenta cuando el listener detecta estado locked
   }
 
   Future<void> _tryBiometric() async {
@@ -33,11 +33,17 @@ class _AuthGatePageState extends ConsumerState<AuthGatePage> {
   }
 
   void _navigateToHome() {
-    if (_isNavigating) return; // Evitar doble navegación
+    if (_isNavigating) return;
     _isNavigating = true;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const ShellPage()),
-    );
+    debugPrint('🏠 Navegando a ShellPage...');
+    try {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const ShellPage()),
+      );
+    } catch (e) {
+      debugPrint('❌ Error al navegar: $e');
+      _isNavigating = false;
+    }
   }
 
   Future<void> _verifyPin() async {
@@ -76,16 +82,48 @@ class _AuthGatePageState extends ConsumerState<AuthGatePage> {
 
     // Listener: navegar cuando el estado cambie a authenticated
     ref.listen<AuthState>(authProvider, (previous, next) {
+      debugPrint('🔐 Auth state: $previous → $next');
       if (next == AuthState.authenticated && mounted) {
         _navigateToHome();
       }
+      // Intentar biometría cuando pase de loading a locked
+      if (previous == AuthState.loading && next == AuthState.locked && mounted) {
+        _tryBiometric();
+      }
     });
+
+    // Loading: esperando a que se determine si hay PIN
+    if (authState == AuthState.loading) {
+      return Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [AppColors.darkGrey, AppColors.background],
+            ),
+          ),
+          child: const Center(
+            child: CircularProgressIndicator(color: AppColors.gold),
+          ),
+        ),
+      );
+    }
 
     // Si ya está autenticado, mostrar loading mientras navega
     if (authState == AuthState.authenticated) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(color: AppColors.gold),
+      return Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [AppColors.darkGrey, AppColors.background],
+            ),
+          ),
+          child: const Center(
+            child: CircularProgressIndicator(color: AppColors.gold),
+          ),
         ),
       );
     }

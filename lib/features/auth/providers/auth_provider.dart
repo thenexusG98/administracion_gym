@@ -13,7 +13,7 @@ final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   return AuthNotifier();
 });
 
-enum AuthState { locked, authenticated, noPinSet }
+enum AuthState { loading, locked, authenticated, noPinSet }
 
 class AuthNotifier extends StateNotifier<AuthState> {
   final _storage = const FlutterSecureStorage();
@@ -21,7 +21,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   static const _pinKey = 'valhalla_pin';
   static const _biometricKey = 'biometric_enabled';
 
-  AuthNotifier() : super(AuthState.locked) {
+  AuthNotifier() : super(AuthState.loading) {
     _checkInitialState();
   }
 

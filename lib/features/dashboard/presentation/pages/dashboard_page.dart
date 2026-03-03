@@ -15,16 +15,40 @@ class DashboardPage extends ConsumerWidget {
     final dashboardAsync = ref.watch(dashboardDataProvider);
     final expiringSoonAsync = ref.watch(expiringSoonStudentsProvider);
 
-    return RefreshIndicator(
-      color: AppColors.gold,
-      onRefresh: () async {
-        ref.invalidate(dashboardDataProvider);
-        ref.invalidate(expiringSoonStudentsProvider);
+    return dashboardAsync.when(
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: AppColors.gold),
+      ),
+      error: (e, st) {
+        debugPrint('❌ Dashboard error: $e\n$st');
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, color: AppColors.error, size: 48),
+                const SizedBox(height: 16),
+                Text('Error al cargar datos:\n$e',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: AppColors.textSecondary)),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => ref.invalidate(dashboardDataProvider),
+                  child: const Text('Reintentar'),
+                ),
+              ],
+            ),
+          ),
+        );
       },
-      child: dashboardAsync.when(
-        loading: () => const LoadingIndicator(),
-        error: (e, _) => Center(child: Text('Error: $e')),
-        data: (data) => ListView(
+      data: (data) => RefreshIndicator(
+        color: AppColors.gold,
+        onRefresh: () async {
+          ref.invalidate(dashboardDataProvider);
+          ref.invalidate(expiringSoonStudentsProvider);
+        },
+        child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
             // ═══ HEADER ═══

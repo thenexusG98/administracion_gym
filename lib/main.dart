@@ -1,11 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:valhalla_bjj/core/theme/app_theme.dart';
 import 'package:valhalla_bjj/core/router/app_router.dart';
 import 'package:valhalla_bjj/features/auth/presentation/pages/auth_gate_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Inicializar locales para DateFormat en español
+  await initializeDateFormatting('es', null);
+
+  // Capturar errores de Flutter para debug
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    debugPrint('⚠️ FlutterError: ${details.exceptionAsString()}');
+  };
+
   runApp(
     const ProviderScope(
       child: ValhallaApp(),
