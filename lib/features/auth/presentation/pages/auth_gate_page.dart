@@ -16,6 +16,7 @@ class _AuthGatePageState extends ConsumerState<AuthGatePage> {
   final _confirmPinController = TextEditingController();
   String? _errorMessage;
   bool _isSettingPin = false;
+  bool _isNavigating = false;
 
   @override
   void initState() {
@@ -27,13 +28,13 @@ class _AuthGatePageState extends ConsumerState<AuthGatePage> {
     await Future.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;
     final auth = ref.read(authProvider.notifier);
-    final success = await auth.authenticateWithBiometrics();
-    if (success && mounted) {
-      _navigateToHome();
-    }
+    await auth.authenticateWithBiometrics();
+    // La navegación la maneja el listener de estado
   }
 
   void _navigateToHome() {
+    if (_isNavigating) return; // Evitar doble navegación
+    _isNavigating = true;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const ShellPage()),
     );
@@ -42,11 +43,10 @@ class _AuthGatePageState extends ConsumerState<AuthGatePage> {
   Future<void> _verifyPin() async {
     final auth = ref.read(authProvider.notifier);
     final success = await auth.verifyPin(_pinController.text);
-    if (success) {
-      _navigateToHome();
-    } else {
+    if (!success) {
       setState(() => _errorMessage = 'PIN incorrecto');
     }
+    // Si es exitoso, el listener navega automáticamente
   }
 
   Future<void> _setNewPin() async {
@@ -60,7 +60,7 @@ class _AuthGatePageState extends ConsumerState<AuthGatePage> {
     }
     final auth = ref.read(authProvider.notifier);
     await auth.setPin(_pinController.text);
-    _navigateToHome();
+    // Si es exitoso, el listener navega automáticamente
   }
 
   @override
@@ -73,6 +73,22 @@ class _AuthGatePageState extends ConsumerState<AuthGatePage> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+
+    // Listener: navegar cuando el estado cambie a authenticated
+    ref.listen<AuthState>(authProvider, (previous, next) {
+      if (next == AuthState.authenticated && mounted) {
+        _navigateToHome();
+      }
+    });
+
+    // Si ya está autenticado, mostrar loading mientras navega
+    if (authState == AuthState.authenticated) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.gold),
+        ),
+      );
+    }
 
     return Scaffold(
       body: Container(
