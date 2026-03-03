@@ -1,10 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valhalla_bjj/core/utils/date_extensions.dart';
 import 'package:valhalla_bjj/providers/providers.dart';
-import 'package:valhalla_bjj/providers/student_providers.dart';
-import 'package:valhalla_bjj/providers/income_providers.dart';
-import 'package:valhalla_bjj/providers/expense_providers.dart';
-import 'package:valhalla_bjj/providers/inventory_providers.dart';
 
 class DashboardData {
   final double ingresosMes;
@@ -49,11 +46,7 @@ class DashboardData {
 }
 
 final dashboardDataProvider = FutureProvider<DashboardData>((ref) async {
-  // Observar cambios
-  ref.watch(studentsProvider);
-  ref.watch(incomesProvider);
-  ref.watch(expensesProvider);
-  ref.watch(productsProvider);
+  debugPrint('📊 Cargando datos del dashboard...');
 
   final now = DateTime.now();
   final startOfMonth = now.startOfMonth;
@@ -81,6 +74,7 @@ final dashboardDataProvider = FutureProvider<DashboardData>((ref) async {
 
   final productoMasVendido = topProductos.isNotEmpty ? topProductos.keys.first : 'N/A';
 
+  debugPrint('📊 Dashboard datos cargados OK');
   return DashboardData(
     ingresosMes: ingresosMes,
     gastosMes: gastosMes,

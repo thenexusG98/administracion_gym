@@ -74,6 +74,7 @@ class _ShellPageState extends ConsumerState<ShellPage> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('🐚 ShellPage build, tab=$_currentIndex');
     final syncStatus = ref.watch(syncStatusProvider);
 
     return Scaffold(
