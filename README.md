@@ -14,6 +14,7 @@ Control total financiero y operativo: alumnos, membresías, ingresos, gastos, in
 - **🔒 Seguridad**: PIN de acceso + autenticación biométrica
 - **📱 Offline First**: Funciona sin internet, base de datos SQLite local
 
+
 ## 🏗️ Arquitectura
 
 ```
