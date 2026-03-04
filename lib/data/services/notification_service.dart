@@ -267,6 +267,8 @@ class NotificationService {
         body,
         _toTZDateTime(scheduledDate),
         _paymentNotificationDetails,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         matchDateTimeComponents: null,
         payload: payload,
