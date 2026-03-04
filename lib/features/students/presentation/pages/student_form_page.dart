@@ -3,8 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valhalla_bjj/core/theme/app_colors.dart';
 import 'package:valhalla_bjj/core/constants/app_constants.dart';
 import 'package:valhalla_bjj/core/models/student.dart';
+import 'package:valhalla_bjj/core/models/payment.dart';
+import 'package:valhalla_bjj/core/models/income.dart';
+import 'package:valhalla_bjj/core/utils/formatters.dart';
 import 'package:valhalla_bjj/providers/student_providers.dart';
 import 'package:valhalla_bjj/providers/providers.dart';
+import 'package:valhalla_bjj/providers/income_providers.dart';
+import 'package:valhalla_bjj/providers/dashboard_providers.dart';
+import 'package:valhalla_bjj/data/services/receipt_service.dart';
 
 class StudentFormPage extends ConsumerStatefulWidget {
   final String? studentId;
@@ -77,18 +83,59 @@ class _StudentFormPageState extends ConsumerState<StudentFormPage> {
 
       if (_isEditing) {
         await ref.read(studentsProvider.notifier).updateStudent(student);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Alumno actualizado'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+          Navigator.pop(context);
+        }
       } else {
+        // Registrar alumno
         await ref.read(studentsProvider.notifier).addStudent(student);
-      }
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_isEditing ? 'Alumno actualizado' : 'Alumno registrado'),
-            backgroundColor: AppColors.success,
-          ),
+        // Registrar primer pago automáticamente
+        final payment = Payment(
+          studentId: student.id,
+          studentName: student.nombre,
+          monto: student.monto,
+          fechaPago: DateTime.now(),
+          tipoPlan: student.tipoPlan,
+          concepto: Formatters.paymentConcept(student.tipoPlan, DateTime.now()),
         );
-        Navigator.pop(context);
+        await ref.read(paymentRepositoryProvider).save(payment);
+
+        // Registrar como ingreso
+        final categoriaIngreso = student.tipoPlan == 'Clase suelta'
+            ? 'Clases sueltas'
+            : student.tipoPlan == 'Quincenal'
+                ? 'Quincenas'
+                : 'Mensualidades';
+        final concepto = Formatters.paymentConcept(student.tipoPlan, DateTime.now());
+        final income = Income(
+          categoria: categoriaIngreso,
+          descripcion: '${student.nombre} - $concepto (Inscripción)',
+          monto: student.monto,
+          fecha: DateTime.now(),
+          referenceId: payment.id,
+        );
+        await ref.read(incomeRepositoryProvider).save(income);
+
+        // Refrescar providers
+        ref.read(incomesProvider.notifier).loadIncomes();
+        ref.invalidate(dashboardDataProvider);
+        ref.invalidate(activeStudentsCountProvider);
+
+        // Reprogramar notificaciones
+        try {
+          await ref.read(notificationServiceProvider).schedulePaymentReminders();
+        } catch (_) {}
+
+        if (mounted) {
+          _showReceiptDialog(payment, student);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -99,6 +146,99 @@ class _StudentFormPageState extends ConsumerState<StudentFormPage> {
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  void _showReceiptDialog(Payment payment, Student student) {
+    final receiptData = ReceiptData(
+      receiptNumber: payment.id.substring(0, 8).toUpperCase(),
+      studentName: student.nombre,
+      studentPhone: student.telefono,
+      plan: student.tipoPlan,
+      amount: payment.monto,
+      paymentDate: payment.fechaPago,
+      nextPaymentDate: student.tipoPlan != 'Clase suelta'
+          ? student.fechaProximoPago
+          : null,
+      concept: Formatters.paymentConcept(student.tipoPlan, payment.fechaPago),
+    );
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle, color: AppColors.success, size: 28),
+            SizedBox(width: 10),
+            Expanded(child: Text('¡Alumno registrado!')),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              student.nombre,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${student.tipoPlan} - ${Formatters.currency(payment.monto)}',
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '¿Qué deseas hacer con el recibo de inscripción?',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.pop(context); // volver a lista de alumnos
+            },
+            child: const Text('Solo cerrar'),
+          ),
+          OutlinedButton.icon(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              Navigator.pop(context);
+              try {
+                await ReceiptService().previewReceipt(receiptData);
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+                  );
+                }
+              }
+            },
+            icon: const Icon(Icons.picture_as_pdf, size: 18),
+            label: const Text('Ver PDF'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              Navigator.pop(context);
+              try {
+                await ReceiptService().shareReceipt(receiptData);
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+                  );
+                }
+              }
+            },
+            icon: const Icon(Icons.share, size: 18),
+            label: const Text('Compartir'),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
+          ),
+        ],
+      ),
+    );
   }
 
   /// Recalcula la fecha de próximo pago según el plan y la fecha de inscripción
