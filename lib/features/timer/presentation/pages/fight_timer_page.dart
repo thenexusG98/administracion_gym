@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:valhalla_bjj/core/theme/app_colors.dart';
 
 class FightTimerPage extends StatefulWidget {
@@ -39,6 +40,9 @@ class _FightTimerPageState extends State<FightTimerPage>
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
+  // Audio
+  final AudioPlayer _audioPlayer = AudioPlayer();
+
   @override
   void initState() {
     super.initState();
@@ -55,8 +59,27 @@ class _FightTimerPageState extends State<FightTimerPage>
   void dispose() {
     _timer?.cancel();
     _pulseController.dispose();
+    _audioPlayer.dispose();
     super.dispose();
   }
+
+  // ═══════════════════════════════════════════
+  // SONIDOS
+  // ═══════════════════════════════════════════
+
+  Future<void> _playSound(String fileName) async {
+    try {
+      await _audioPlayer.stop();
+      await _audioPlayer.play(AssetSource('audio/$fileName'));
+    } catch (e) {
+      debugPrint('🔊 Error reproduciendo sonido: $e');
+    }
+  }
+
+  void _playRoundEnd() => _playSound('round_end.wav');
+  void _playRestEnd() => _playSound('rest_end.wav');
+  void _playFightEnd() => _playSound('fight_end.wav');
+  void _playCountdownTick() => _playSound('countdown_tick.wav');
 
   // ═══════════════════════════════════════════
   // LÓGICA DEL TIMER
@@ -82,9 +105,10 @@ class _FightTimerPageState extends State<FightTimerPage>
       // Últimos 10 segundos: pulso visual
       if (_remainingSeconds <= 10 && _remainingSeconds > 0) {
         _pulseController.forward().then((_) => _pulseController.reverse());
-        // Vibración corta en últimos 3 segundos
+        // Tick audible en últimos 3 segundos
         if (_remainingSeconds <= 3) {
           HapticFeedback.mediumImpact();
+          _playCountdownTick();
         }
       }
     } else {
@@ -94,6 +118,7 @@ class _FightTimerPageState extends State<FightTimerPage>
 
       if (_isResting) {
         // Terminó el descanso → siguiente ronda
+        _playRestEnd();
         setState(() {
           _currentRound++;
           _isResting = false;
@@ -102,6 +127,7 @@ class _FightTimerPageState extends State<FightTimerPage>
         _timer = Timer.periodic(const Duration(seconds: 1), _tick);
       } else if (_currentRound < _totalRounds) {
         // Terminó la ronda → descanso
+        _playRoundEnd();
         setState(() {
           _isResting = true;
           _remainingSeconds = _restSeconds;
@@ -109,6 +135,7 @@ class _FightTimerPageState extends State<FightTimerPage>
         _timer = Timer.periodic(const Duration(seconds: 1), _tick);
       } else {
         // ¡Terminaron todas las rondas!
+        _playFightEnd();
         setState(() {
           _isRunning = false;
           _isFinished = true;
