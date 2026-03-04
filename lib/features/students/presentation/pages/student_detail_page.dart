@@ -75,9 +75,10 @@ class _StudentDetailPageState extends ConsumerState<StudentDetailPage> {
     final categoriaIngreso = _student!.tipoPlan == 'Clase suelta'
         ? 'Clases sueltas'
         : 'Mensualidades';
+    final concepto = Formatters.paymentConcept(_student!.tipoPlan, DateTime.now());
     final income = Income(
       categoria: categoriaIngreso,
-      descripcion: 'Pago de ${_student!.nombre} - ${_student!.tipoPlan}',
+      descripcion: '${_student!.nombre} - $concepto',
       monto: _student!.monto,
       fecha: DateTime.now(),
       referenceId: payment.id,
@@ -139,9 +140,7 @@ class _StudentDetailPageState extends ConsumerState<StudentDetailPage> {
       nextPaymentDate: student.tipoPlan != 'Clase suelta'
           ? student.fechaProximoPago
           : null,
-      concept: student.tipoPlan == 'Clase suelta'
-          ? 'Clase suelta'
-          : 'Mensualidad - ${student.tipoPlan}',
+      concept: Formatters.paymentConcept(student.tipoPlan, payment.fechaPago),
     );
 
     showDialog(

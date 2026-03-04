@@ -85,4 +85,34 @@ class Formatters {
   }
 
   static String percentage(double value) => '${value.toStringAsFixed(1)}%';
+
+  /// Genera el concepto descriptivo del pago según el tipo de plan
+  static String paymentConcept(String tipoPlan, DateTime fechaPago) {
+    const months = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+
+    String _short(DateTime d) {
+      final dia = d.day.toString().padLeft(2, '0');
+      final mes = months[d.month - 1].substring(0, 3);
+      return '$dia $mes';
+    }
+
+    switch (tipoPlan) {
+      case 'Mensual':
+        final mes = months[fechaPago.month - 1];
+        return 'Mensualidad - $mes ${fechaPago.year}';
+      case 'Quincenal':
+        final fin = fechaPago.add(const Duration(days: 15));
+        return 'Quincena - ${_short(fechaPago)} al ${_short(fin)} ${fin.year}';
+      case 'Clase suelta':
+        final dia = fechaPago.day.toString().padLeft(2, '0');
+        final mesCorto = months[fechaPago.month - 1].substring(0, 3);
+        return 'Clase suelta - $dia $mesCorto ${fechaPago.year}';
+      default:
+        final mes = months[fechaPago.month - 1];
+        return 'Pago - $mes ${fechaPago.year}';
+    }
+  }
 }

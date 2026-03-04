@@ -256,13 +256,20 @@ class _StudentListTile extends StatelessWidget {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Icon(Icons.phone, size: 14, color: AppColors.textHint),
+                    const Icon(Icons.phone, size: 14, color: AppColors.textHint),
                     const SizedBox(width: 4),
-                    Text(
-                      student.telefono,
-                      style: Theme.of(context).textTheme.bodySmall,
+                    Flexible(
+                      child: Text(
+                        student.telefono,
+                        style: Theme.of(context).textTheme.bodySmall,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    const SizedBox(width: 12),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
@@ -278,32 +285,32 @@ class _StudentListTile extends StatelessWidget {
                         ),
                       ),
                     ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        Formatters.paymentStatus(student),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: _paymentStatusColor(student),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ],
                 ),
               ],
             ),
           ),
 
-          // Monto y fecha
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                Formatters.currency(student.monto),
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppColors.gold,
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                Formatters.paymentStatus(student),
-                style: TextStyle(
-                  fontSize: 11,
-                  color: _paymentStatusColor(student),
+          const SizedBox(width: 8),
+
+          // Monto
+          Text(
+            Formatters.currency(student.monto),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppColors.gold,
+                  fontWeight: FontWeight.bold,
                 ),
-              ),
-            ],
           ),
         ],
       ),
