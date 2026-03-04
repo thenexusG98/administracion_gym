@@ -10,6 +10,7 @@ import 'package:valhalla_bjj/features/students/presentation/pages/students_page.
 import 'package:valhalla_bjj/features/income/presentation/pages/income_page.dart';
 import 'package:valhalla_bjj/features/expenses/presentation/pages/expenses_page.dart';
 import 'package:valhalla_bjj/features/inventory/presentation/pages/inventory_page.dart';
+import 'package:valhalla_bjj/features/timer/presentation/pages/fight_timer_page.dart';
 
 class ShellPage extends ConsumerStatefulWidget {
   const ShellPage({super.key});
@@ -80,18 +81,24 @@ class _ShellPageState extends ConsumerState<ShellPage> {
     final syncStatus = ref.watch(syncStatusProvider);
 
     return Scaffold(
+      drawer: _buildDrawer(context),
       appBar: AppBar(
         title: Text(_titles[_currentIndex]),
         centerTitle: true,
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: ClipOval(
-            child: Image.asset(
-              'assets/images/logo_valhalla_192.png',
-              width: 36,
-              height: 36,
-              fit: BoxFit.cover,
+        leading: Builder(
+          builder: (ctx) => IconButton(
+            icon: Padding(
+              padding: const EdgeInsets.all(4.0),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/images/logo_valhalla_192.png',
+                  width: 32,
+                  height: 32,
+                  fit: BoxFit.cover,
+                ),
+              ),
             ),
+            onPressed: () => Scaffold.of(ctx).openDrawer(),
           ),
         ),
         actions: [
@@ -209,6 +216,123 @@ class _ShellPageState extends ConsumerState<ShellPage> {
               icon: Icon(Icons.inventory_2_outlined),
               activeIcon: Icon(Icons.inventory_2),
               label: 'Inventario',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawer(BuildContext context) {
+    return Drawer(
+      backgroundColor: AppColors.surface,
+      child: SafeArea(
+        child: Column(
+          children: [
+            // Header del drawer
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+              decoration: const BoxDecoration(
+                color: AppColors.cardDark,
+                border: Border(
+                  bottom: BorderSide(color: AppColors.divider),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipOval(
+                    child: Image.asset(
+                      'assets/images/logo_valhalla_192.png',
+                      width: 56,
+                      height: 56,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Valhalla BJJ',
+                    style: TextStyle(
+                      color: AppColors.gold,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    'Sistema de Administración',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            // Sección: Herramientas
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 12, 20, 8),
+              child: Row(
+                children: [
+                  Text(
+                    'HERRAMIENTAS',
+                    style: TextStyle(
+                      color: AppColors.textHint,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Timer de combate
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.red.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.timer, color: AppColors.red, size: 22),
+              ),
+              title: const Text(
+                'Timer de Combate',
+                style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w500),
+              ),
+              subtitle: const Text(
+                'Rondas, tiempo y descanso',
+                style: TextStyle(color: AppColors.textHint, fontSize: 12),
+              ),
+              trailing: const Icon(Icons.chevron_right, color: AppColors.textHint),
+              onTap: () {
+                Navigator.pop(context); // cerrar drawer
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const FightTimerPage()),
+                );
+              },
+            ),
+
+            const Divider(color: AppColors.divider, height: 1, indent: 20, endIndent: 20),
+
+            const Spacer(),
+
+            // Footer
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'v1.0.0 • Valhalla BJJ',
+                style: TextStyle(
+                  color: AppColors.textHint.withOpacity(0.5),
+                  fontSize: 11,
+                ),
+              ),
             ),
           ],
         ),
