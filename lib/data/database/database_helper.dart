@@ -35,20 +35,43 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDatabase() async {
+    debugPrint('🗄️ Obteniendo path de DB...');
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'valhalla_bjj.db');
+    debugPrint('🗄️ Path: $path');
 
-    return await openDatabase(
+    debugPrint('🗄️ Abriendo DB...');
+    final db = await openDatabase(
       path,
       version: 1,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
+    debugPrint('🗄️ DB abierta, verificando tablas...');
+
+    // Verificar que las tablas existen
+    final tables = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'android_%'",
+    );
+    final tableNames = tables.map((t) => t['name'] as String).toList();
+    debugPrint('🗄️ Tablas encontradas: $tableNames');
+
+    // Si faltan tablas, recrear
+    if (!tableNames.contains('students') || !tableNames.contains('incomes')) {
+      debugPrint('🗄️ ⚠️ Tablas faltantes, recreando...');
+      await _onCreate(db, 1);
+    }
+
+    debugPrint('🗄️ DB lista');
+    return db;
   }
 
   Future<void> _onCreate(Database db, int version) async {
-    await db.execute('''
-      CREATE TABLE students (
+    debugPrint('🗄️ Creando tablas...');
+    final batch = db.batch();
+
+    batch.execute('''
+      CREATE TABLE IF NOT EXISTS students (
         id TEXT PRIMARY KEY,
         nombre TEXT NOT NULL,
         telefono TEXT NOT NULL,
@@ -65,8 +88,8 @@ class DatabaseHelper {
       )
     ''');
 
-    await db.execute('''
-      CREATE TABLE payments (
+    batch.execute('''
+      CREATE TABLE IF NOT EXISTS payments (
         id TEXT PRIMARY KEY,
         student_id TEXT NOT NULL,
         student_name TEXT NOT NULL,
@@ -80,8 +103,8 @@ class DatabaseHelper {
       )
     ''');
 
-    await db.execute('''
-      CREATE TABLE incomes (
+    batch.execute('''
+      CREATE TABLE IF NOT EXISTS incomes (
         id TEXT PRIMARY KEY,
         categoria TEXT NOT NULL,
         descripcion TEXT NOT NULL,
@@ -93,8 +116,8 @@ class DatabaseHelper {
       )
     ''');
 
-    await db.execute('''
-      CREATE TABLE expenses (
+    batch.execute('''
+      CREATE TABLE IF NOT EXISTS expenses (
         id TEXT PRIMARY KEY,
         categoria TEXT NOT NULL,
         descripcion TEXT NOT NULL,
@@ -108,8 +131,8 @@ class DatabaseHelper {
       )
     ''');
 
-    await db.execute('''
-      CREATE TABLE products (
+    batch.execute('''
+      CREATE TABLE IF NOT EXISTS products (
         id TEXT PRIMARY KEY,
         nombre TEXT NOT NULL,
         categoria TEXT NOT NULL,
@@ -124,8 +147,8 @@ class DatabaseHelper {
       )
     ''');
 
-    await db.execute('''
-      CREATE TABLE sales (
+    batch.execute('''
+      CREATE TABLE IF NOT EXISTS sales (
         id TEXT PRIMARY KEY,
         product_id TEXT NOT NULL,
         product_name TEXT NOT NULL,
@@ -140,8 +163,8 @@ class DatabaseHelper {
       )
     ''');
 
-    await db.execute('''
-      CREATE TABLE monthly_goals (
+    batch.execute('''
+      CREATE TABLE IF NOT EXISTS monthly_goals (
         id TEXT PRIMARY KEY,
         year INTEGER NOT NULL,
         month INTEGER NOT NULL,
@@ -153,8 +176,8 @@ class DatabaseHelper {
       )
     ''');
 
-    await db.execute('''
-      CREATE TABLE attendance (
+    batch.execute('''
+      CREATE TABLE IF NOT EXISTS attendance (
         id TEXT PRIMARY KEY,
         student_id TEXT NOT NULL,
         student_name TEXT NOT NULL,
@@ -164,19 +187,23 @@ class DatabaseHelper {
       )
     ''');
 
-    // Índices para búsquedas rápidas
-    await db.execute('CREATE INDEX idx_students_estado ON students(estado)');
-    await db.execute('CREATE INDEX idx_payments_student ON payments(student_id)');
-    await db.execute('CREATE INDEX idx_payments_fecha ON payments(fecha_pago)');
-    await db.execute('CREATE INDEX idx_incomes_fecha ON incomes(fecha)');
-    await db.execute('CREATE INDEX idx_incomes_categoria ON incomes(categoria)');
-    await db.execute('CREATE INDEX idx_expenses_fecha ON expenses(fecha)');
-    await db.execute('CREATE INDEX idx_expenses_categoria ON expenses(categoria)');
-    await db.execute('CREATE INDEX idx_products_categoria ON products(categoria)');
-    await db.execute('CREATE INDEX idx_sales_fecha ON sales(fecha)');
-    await db.execute('CREATE INDEX idx_sales_product ON sales(product_id)');
-    await db.execute('CREATE INDEX idx_attendance_student ON attendance(student_id)');
-    await db.execute('CREATE INDEX idx_attendance_fecha ON attendance(fecha)');
+    // Índices
+    batch.execute('CREATE INDEX IF NOT EXISTS idx_students_estado ON students(estado)');
+    batch.execute('CREATE INDEX IF NOT EXISTS idx_payments_student ON payments(student_id)');
+    batch.execute('CREATE INDEX IF NOT EXISTS idx_payments_fecha ON payments(fecha_pago)');
+    batch.execute('CREATE INDEX IF NOT EXISTS idx_incomes_fecha ON incomes(fecha)');
+    batch.execute('CREATE INDEX IF NOT EXISTS idx_incomes_categoria ON incomes(categoria)');
+    batch.execute('CREATE INDEX IF NOT EXISTS idx_expenses_fecha ON expenses(fecha)');
+    batch.execute('CREATE INDEX IF NOT EXISTS idx_expenses_categoria ON expenses(categoria)');
+    batch.execute('CREATE INDEX IF NOT EXISTS idx_products_categoria ON products(categoria)');
+    batch.execute('CREATE INDEX IF NOT EXISTS idx_sales_fecha ON sales(fecha)');
+    batch.execute('CREATE INDEX IF NOT EXISTS idx_sales_product ON sales(product_id)');
+    batch.execute('CREATE INDEX IF NOT EXISTS idx_attendance_student ON attendance(student_id)');
+    batch.execute('CREATE INDEX IF NOT EXISTS idx_attendance_fecha ON attendance(fecha)');
+
+    debugPrint('🗄️ Ejecutando batch de creación...');
+    await batch.commit(noResult: true);
+    debugPrint('🗄️ ✅ Tablas creadas OK');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {

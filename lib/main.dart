@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:valhalla_bjj/core/theme/app_theme.dart';
 import 'package:valhalla_bjj/core/router/app_router.dart';
+import 'package:valhalla_bjj/data/database/database_helper.dart';
 import 'package:valhalla_bjj/features/auth/presentation/pages/auth_gate_page.dart';
 
 void main() async {
@@ -10,6 +11,15 @@ void main() async {
 
   // Inicializar locales para DateFormat en español
   await initializeDateFormatting('es', null);
+
+  // Pre-inicializar la base de datos ANTES de que los providers la necesiten
+  debugPrint('🚀 Pre-inicializando base de datos...');
+  try {
+    await DatabaseHelper().database;
+    debugPrint('🚀 ✅ DB pre-inicializada OK');
+  } catch (e) {
+    debugPrint('🚀 ❌ Error pre-inicializando DB: $e');
+  }
 
   // Capturar errores de Flutter para debug
   FlutterError.onError = (details) {
