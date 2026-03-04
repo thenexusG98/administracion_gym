@@ -11,6 +11,7 @@ import 'package:valhalla_bjj/features/income/presentation/pages/income_page.dart
 import 'package:valhalla_bjj/features/expenses/presentation/pages/expenses_page.dart';
 import 'package:valhalla_bjj/features/inventory/presentation/pages/inventory_page.dart';
 import 'package:valhalla_bjj/features/timer/presentation/pages/fight_timer_page.dart';
+import 'package:valhalla_bjj/features/receipts/presentation/pages/receipts_page.dart';
 
 class ShellPage extends ConsumerStatefulWidget {
   const ShellPage({super.key});
@@ -315,6 +316,36 @@ class _ShellPageState extends ConsumerState<ShellPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const FightTimerPage()),
+                );
+              },
+            ),
+
+            const Divider(color: AppColors.divider, height: 1, indent: 20, endIndent: 20),
+
+            // Recibos de pago
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.gold.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.receipt_long, color: AppColors.gold, size: 22),
+              ),
+              title: const Text(
+                'Recibos de Pago',
+                style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w500),
+              ),
+              subtitle: const Text(
+                'Generar y compartir recibos PDF',
+                style: TextStyle(color: AppColors.textHint, fontSize: 12),
+              ),
+              trailing: const Icon(Icons.chevron_right, color: AppColors.textHint),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ReceiptsPage()),
                 );
               },
             ),

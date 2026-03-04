@@ -101,6 +101,39 @@ class _StudentFormPageState extends ConsumerState<StudentFormPage> {
     }
   }
 
+  /// Recalcula la fecha de próximo pago según el plan y la fecha de inscripción
+  void _recalcularProximoPago() {
+    switch (_tipoPlan) {
+      case 'Mensual':
+        _fechaProximoPago = DateTime(
+          _fechaInscripcion.year,
+          _fechaInscripcion.month + 1,
+          _fechaInscripcion.day,
+        );
+        break;
+      case 'Quincenal':
+        _fechaProximoPago = _fechaInscripcion.add(const Duration(days: 15));
+        break;
+      case 'Clase suelta':
+      default:
+        _fechaProximoPago = _fechaInscripcion;
+        break;
+    }
+  }
+
+  String get _proximoPagoHint {
+    switch (_tipoPlan) {
+      case 'Mensual':
+        return 'Calculado: 1 mes desde inscripción';
+      case 'Quincenal':
+        return 'Calculado: 15 días desde inscripción';
+      case 'Clase suelta':
+        return 'Clase suelta: pago por sesión';
+      default:
+        return '';
+    }
+  }
+
   Future<void> _selectDate(BuildContext context, bool isInscripcion) async {
     final picked = await showDatePicker(
       context: context,
@@ -123,6 +156,10 @@ class _StudentFormPageState extends ConsumerState<StudentFormPage> {
       setState(() {
         if (isInscripcion) {
           _fechaInscripcion = picked;
+          // Recalcular próximo pago solo si es alumno nuevo
+          if (!_isEditing) {
+            _recalcularProximoPago();
+          }
         } else {
           _fechaProximoPago = picked;
         }
@@ -189,14 +226,7 @@ class _StudentFormPageState extends ConsumerState<StudentFormPage> {
                 if (v != null) {
                   setState(() {
                     _tipoPlan = v;
-                    // Ajustar fecha de próximo pago automáticamente
-                    if (v == AppConstants.planMensual) {
-                      _fechaProximoPago = DateTime.now().add(const Duration(days: 30));
-                    } else if (v == AppConstants.planQuincenal) {
-                      _fechaProximoPago = DateTime.now().add(const Duration(days: 15));
-                    } else {
-                      _fechaProximoPago = DateTime.now();
-                    }
+                    _recalcularProximoPago();
                   });
                 }
               },
@@ -284,10 +314,21 @@ class _StudentFormPageState extends ConsumerState<StudentFormPage> {
               ),
               leading: const Icon(Icons.event, color: AppColors.gold),
               title: const Text('Fecha de próximo pago'),
-              subtitle: Text(
-                '${_fechaProximoPago.day}/${_fechaProximoPago.month}/${_fechaProximoPago.year}',
-                style: const TextStyle(color: AppColors.textPrimary),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${_fechaProximoPago.day}/${_fechaProximoPago.month}/${_fechaProximoPago.year}',
+                    style: const TextStyle(color: AppColors.textPrimary),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _proximoPagoHint,
+                    style: const TextStyle(color: AppColors.gold, fontSize: 11),
+                  ),
+                ],
               ),
+              trailing: const Icon(Icons.edit_calendar, color: AppColors.textHint, size: 18),
               onTap: () => _selectDate(context, false),
             ),
             const SizedBox(height: 16),

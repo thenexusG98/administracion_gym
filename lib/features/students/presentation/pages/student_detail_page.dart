@@ -10,6 +10,7 @@ import 'package:valhalla_bjj/providers/student_providers.dart';
 import 'package:valhalla_bjj/providers/income_providers.dart';
 import 'package:valhalla_bjj/providers/dashboard_providers.dart';
 import 'package:valhalla_bjj/features/students/presentation/pages/student_form_page.dart';
+import 'package:valhalla_bjj/data/services/receipt_service.dart';
 import 'package:valhalla_bjj/shared/widgets/common_widgets.dart';
 
 class StudentDetailPage extends ConsumerStatefulWidget {
@@ -123,13 +124,92 @@ class _StudentDetailPageState extends ConsumerState<StudentDetailPage> {
     } catch (_) {}
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Pago registrado exitosamente'),
-          backgroundColor: AppColors.success,
-        ),
-      );
+      _showReceiptDialog(payment, updatedStudent);
     }
+  }
+
+  void _showReceiptDialog(Payment payment, Student student) {
+    final receiptData = ReceiptData(
+      receiptNumber: payment.id.substring(0, 8).toUpperCase(),
+      studentName: student.nombre,
+      studentPhone: student.telefono,
+      plan: student.tipoPlan,
+      amount: payment.monto,
+      paymentDate: payment.fechaPago,
+      nextPaymentDate: student.tipoPlan != 'Clase suelta'
+          ? student.fechaProximoPago
+          : null,
+      concept: student.tipoPlan == 'Clase suelta'
+          ? 'Clase suelta'
+          : 'Mensualidad - ${student.tipoPlan}',
+    );
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle, color: AppColors.success, size: 28),
+            SizedBox(width: 10),
+            Text('¡Pago registrado!'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${student.nombre} - ${Formatters.currency(payment.monto)}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '¿Qué deseas hacer con el recibo?',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cerrar'),
+          ),
+          OutlinedButton.icon(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                await ReceiptService().previewReceipt(receiptData);
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+                  );
+                }
+              }
+            },
+            icon: const Icon(Icons.picture_as_pdf, size: 18),
+            label: const Text('Ver PDF'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                await ReceiptService().shareReceipt(receiptData);
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+                  );
+                }
+              }
+            },
+            icon: const Icon(Icons.share, size: 18),
+            label: const Text('Compartir'),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _deleteStudent() async {
