@@ -62,8 +62,16 @@ class DashboardPage extends ConsumerWidget {
             // ═══ HEADER ═══
             Row(
               children: [
-                const Text('⚔️', style: TextStyle(fontSize: 28)),
-                const SizedBox(width: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.asset(
+                    'assets/images/logo_valhalla.png',
+                    width: 48,
+                    height: 48,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                const SizedBox(width: 12),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

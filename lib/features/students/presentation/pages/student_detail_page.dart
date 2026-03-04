@@ -8,6 +8,7 @@ import 'package:valhalla_bjj/core/utils/formatters.dart';
 import 'package:valhalla_bjj/providers/providers.dart';
 import 'package:valhalla_bjj/providers/student_providers.dart';
 import 'package:valhalla_bjj/providers/income_providers.dart';
+import 'package:valhalla_bjj/providers/dashboard_providers.dart';
 import 'package:valhalla_bjj/features/students/presentation/pages/student_form_page.dart';
 import 'package:valhalla_bjj/shared/widgets/common_widgets.dart';
 
@@ -70,8 +71,11 @@ class _StudentDetailPageState extends ConsumerState<StudentDetailPage> {
     await ref.read(paymentRepositoryProvider).save(payment);
 
     // Registrar como ingreso
+    final categoriaIngreso = _student!.tipoPlan == 'Clase suelta'
+        ? 'Clases sueltas'
+        : 'Mensualidades';
     final income = Income(
-      categoria: 'Mensualidades',
+      categoria: categoriaIngreso,
       descripcion: 'Pago de ${_student!.nombre} - ${_student!.tipoPlan}',
       monto: _student!.monto,
       fecha: DateTime.now(),
@@ -79,23 +83,38 @@ class _StudentDetailPageState extends ConsumerState<StudentDetailPage> {
     );
     await ref.read(incomeRepositoryProvider).save(income);
 
-    // Actualizar fecha de próximo pago
-    final diasPlan = _student!.tipoPlan == 'Mensual'
-        ? 30
-        : _student!.tipoPlan == 'Quincenal'
-            ? 15
-            : 0;
-
-    if (diasPlan > 0) {
-      final updatedStudent = _student!.copyWith(
-        fechaProximoPago: DateTime.now().add(Duration(days: diasPlan)),
-        estado: 'Activo',
-      );
-      await ref.read(studentsProvider.notifier).updateStudent(updatedStudent);
+    // Actualizar alumno según tipo de plan
+    Student updatedStudent;
+    switch (_student!.tipoPlan) {
+      case 'Mensual':
+        updatedStudent = _student!.copyWith(
+          fechaProximoPago: DateTime.now().add(const Duration(days: 30)),
+          estado: 'Activo',
+        );
+        break;
+      case 'Quincenal':
+        updatedStudent = _student!.copyWith(
+          fechaProximoPago: DateTime.now().add(const Duration(days: 15)),
+          estado: 'Activo',
+        );
+        break;
+      case 'Clase suelta':
+      default:
+        // Clase suelta: marcar como pagada hoy, próximo pago = hoy (ya pagó)
+        updatedStudent = _student!.copyWith(
+          fechaProximoPago: DateTime.now(),
+          estado: 'Activo',
+        );
+        break;
     }
+    await ref.read(studentsProvider.notifier).updateStudent(updatedStudent);
 
+    // Refrescar todos los providers afectados
     ref.read(incomesProvider.notifier).loadIncomes();
     ref.invalidate(studentPaymentsProvider(widget.studentId));
+    ref.invalidate(dashboardDataProvider);
+    ref.invalidate(expiringSoonStudentsProvider);
+    ref.invalidate(activeStudentsCountProvider);
     await _loadStudent();
 
     if (mounted) {
@@ -203,7 +222,8 @@ class _StudentDetailPageState extends ConsumerState<StudentDetailPage> {
                 _infoRow('💰', 'Monto', Formatters.currency(_student!.monto)),
                 _infoRow('📅', 'Inscripción', Formatters.date(_student!.fechaInscripcion)),
                 _infoRow('⏰', 'Próximo pago', Formatters.date(_student!.fechaProximoPago)),
-                _infoRow('🔖', 'Estado', _student!.estado),
+                _infoRow('🔖', 'Estado pago', Formatters.paymentStatus(_student!)),
+                _infoRow('📌', 'Estado', _student!.estado),
                 if (_student!.notas != null && _student!.notas!.isNotEmpty)
                   _infoRow('📝', 'Notas', _student!.notas!),
               ],

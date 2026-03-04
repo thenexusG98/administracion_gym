@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'package:valhalla_bjj/core/models/student.dart';
 
 class Formatters {
   Formatters._();
@@ -50,11 +51,37 @@ class Formatters {
 
   static String daysRemaining(DateTime targetDate) {
     final now = DateTime.now();
-    final diff = targetDate.difference(now).inDays;
+    final today = DateTime(now.year, now.month, now.day);
+    final target = DateTime(targetDate.year, targetDate.month, targetDate.day);
+    final diff = target.difference(today).inDays;
     if (diff < 0) return 'Vencido hace ${-diff} días';
     if (diff == 0) return 'Vence hoy';
     if (diff == 1) return 'Vence mañana';
     return 'Vence en $diff días';
+  }
+
+  /// Devuelve el estado de pago legible para un alumno
+  static String paymentStatus(Student student) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final target = DateTime(
+      student.fechaProximoPago.year,
+      student.fechaProximoPago.month,
+      student.fechaProximoPago.day,
+    );
+    final diff = target.difference(today).inDays;
+
+    if (student.tipoPlan == 'Clase suelta') {
+      // Para clase suelta: si la fecha es hoy o futura, está al corriente
+      if (diff >= 0) return '✅ Pagado';
+      return '⚠️ Sin pago reciente';
+    }
+
+    // Para planes recurrentes (Mensual, Quincenal)
+    if (diff < 0) return '🔴 Vencido hace ${-diff} días';
+    if (diff == 0) return '⚠️ Vence hoy';
+    if (diff <= 3) return '⚠️ Vence en $diff días';
+    return '✅ Al corriente (vence en $diff días)';
   }
 
   static String percentage(double value) => '${value.toStringAsFixed(1)}%';

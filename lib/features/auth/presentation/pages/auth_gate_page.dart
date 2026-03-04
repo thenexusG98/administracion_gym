@@ -146,11 +146,10 @@ class _AuthGatePageState extends ConsumerState<AuthGatePage> {
                 children: [
                   // Logo
                   Container(
-                    width: 120,
-                    height: 120,
+                    width: 140,
+                    height: 140,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.gold, width: 3),
                       boxShadow: [
                         BoxShadow(
                           color: AppColors.gold.withOpacity(0.3),
@@ -159,10 +158,11 @@ class _AuthGatePageState extends ConsumerState<AuthGatePage> {
                         ),
                       ],
                     ),
-                    child: const Icon(
-                      Icons.sports_martial_arts,
-                      size: 64,
-                      color: AppColors.gold,
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/images/logo_valhalla.png',
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),

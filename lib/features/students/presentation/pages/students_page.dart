@@ -4,6 +4,7 @@ import 'package:valhalla_bjj/core/theme/app_colors.dart';
 import 'package:valhalla_bjj/core/models/student.dart';
 import 'package:valhalla_bjj/core/utils/formatters.dart';
 import 'package:valhalla_bjj/providers/student_providers.dart';
+import 'package:valhalla_bjj/providers/dashboard_providers.dart';
 import 'package:valhalla_bjj/features/students/presentation/pages/student_form_page.dart';
 import 'package:valhalla_bjj/features/students/presentation/pages/student_detail_page.dart';
 import 'package:valhalla_bjj/shared/widgets/common_widgets.dart';
@@ -139,22 +140,32 @@ class _StudentsPageState extends ConsumerState<StudentsPage> {
     );
   }
 
-  void _navigateToForm(BuildContext context, [String? studentId]) {
-    Navigator.push(
+  Future<void> _navigateToForm(BuildContext context, [String? studentId]) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => StudentFormPage(studentId: studentId),
       ),
     );
+    // Al regresar, refrescar datos
+    if (mounted) {
+      ref.invalidate(dashboardDataProvider);
+      ref.invalidate(expiringSoonStudentsProvider);
+    }
   }
 
-  void _navigateToDetail(BuildContext context, String studentId) {
-    Navigator.push(
+  Future<void> _navigateToDetail(BuildContext context, String studentId) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => StudentDetailPage(studentId: studentId),
       ),
     );
+    // Al regresar del detalle, refrescar datos por si se registró un pago
+    if (mounted) {
+      ref.invalidate(dashboardDataProvider);
+      ref.invalidate(expiringSoonStudentsProvider);
+    }
   }
 }
 
@@ -175,6 +186,19 @@ class _StudentListTile extends StatelessWidget {
       default:
         return AppColors.textHint;
     }
+  }
+
+  Color _paymentStatusColor(Student s) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final target = DateTime(s.fechaProximoPago.year, s.fechaProximoPago.month, s.fechaProximoPago.day);
+    final diff = target.difference(today).inDays;
+    if (s.tipoPlan == 'Clase suelta') {
+      return diff >= 0 ? AppColors.success : AppColors.textHint;
+    }
+    if (diff < 0) return AppColors.error;
+    if (diff <= 3) return AppColors.warning;
+    return AppColors.success;
   }
 
   String get _beltEmoji {
@@ -273,12 +297,10 @@ class _StudentListTile extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                Formatters.daysRemaining(student.fechaProximoPago),
+                Formatters.paymentStatus(student),
                 style: TextStyle(
                   fontSize: 11,
-                  color: student.isExpiringSoon || student.isExpired
-                      ? AppColors.warning
-                      : AppColors.textHint,
+                  color: _paymentStatusColor(student),
                 ),
               ),
             ],

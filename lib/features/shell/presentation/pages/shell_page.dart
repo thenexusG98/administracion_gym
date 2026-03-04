@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valhalla_bjj/core/theme/app_colors.dart';
 import 'package:valhalla_bjj/data/services/google_sheets_service.dart';
 import 'package:valhalla_bjj/providers/providers.dart';
+import 'package:valhalla_bjj/providers/dashboard_providers.dart';
+import 'package:valhalla_bjj/providers/student_providers.dart';
 import 'package:valhalla_bjj/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:valhalla_bjj/features/students/presentation/pages/students_page.dart';
 import 'package:valhalla_bjj/features/income/presentation/pages/income_page.dart';
@@ -83,13 +85,12 @@ class _ShellPageState extends ConsumerState<ShellPage> {
         centerTitle: true,
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.gold.withOpacity(0.1),
-            ),
-            child: const Center(
-              child: Text('⚔️', style: TextStyle(fontSize: 20)),
+          child: ClipOval(
+            child: Image.asset(
+              'assets/images/logo_valhalla_192.png',
+              width: 36,
+              height: 36,
+              fit: BoxFit.cover,
             ),
           ),
         ),
@@ -168,7 +169,15 @@ class _ShellPageState extends ConsumerState<ShellPage> {
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
+          onTap: (index) {
+            // Si regresa al dashboard, refrescar datos automáticamente
+            if (index == 0 && _currentIndex != 0) {
+              ref.invalidate(dashboardDataProvider);
+              ref.invalidate(expiringSoonStudentsProvider);
+              ref.invalidate(activeStudentsCountProvider);
+            }
+            setState(() => _currentIndex = index);
+          },
           type: BottomNavigationBarType.fixed,
           backgroundColor: AppColors.surface,
           selectedItemColor: AppColors.gold,
@@ -263,11 +272,19 @@ class _ShellPageState extends ConsumerState<ShellPage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Text('⚔️ ', style: TextStyle(fontSize: 24)),
-            SizedBox(width: 8),
-            Text('Valhalla BJJ'),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.asset(
+                'assets/images/logo_valhalla_192.png',
+                width: 36,
+                height: 36,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text('Valhalla BJJ'),
           ],
         ),
         content: const Column(
