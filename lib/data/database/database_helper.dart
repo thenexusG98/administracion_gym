@@ -1,16 +1,36 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   static Database? _database;
+  static Completer<Database>? _completer;
 
   factory DatabaseHelper() => _instance;
   DatabaseHelper._internal();
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDatabase();
+
+    // Evitar race condition: si ya se está inicializando, esperar
+    if (_completer != null) {
+      return _completer!.future;
+    }
+
+    _completer = Completer<Database>();
+    try {
+      debugPrint('🗄️ Inicializando base de datos...');
+      _database = await _initDatabase();
+      debugPrint('🗄️ ✅ Base de datos inicializada');
+      _completer!.complete(_database!);
+    } catch (e, st) {
+      debugPrint('🗄️ ❌ Error inicializando DB: $e\n$st');
+      _completer!.completeError(e, st);
+      _completer = null;
+      rethrow;
+    }
     return _database!;
   }
 

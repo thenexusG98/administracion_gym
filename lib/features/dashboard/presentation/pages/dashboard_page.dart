@@ -13,11 +13,17 @@ class DashboardPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboardAsync = ref.watch(dashboardDataProvider);
-    final expiringSoonAsync = ref.watch(expiringSoonStudentsProvider);
 
     return dashboardAsync.when(
       loading: () => const Center(
-        child: CircularProgressIndicator(color: AppColors.gold),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: AppColors.gold),
+            SizedBox(height: 16),
+            Text('Cargando dashboard...', style: TextStyle(color: AppColors.textSecondary)),
+          ],
+        ),
       ),
       error: (e, st) {
         debugPrint('❌ Dashboard error: $e\n$st');
@@ -42,7 +48,9 @@ class DashboardPage extends ConsumerWidget {
           ),
         );
       },
-      data: (data) => RefreshIndicator(
+      data: (data) {
+        final expiringSoonAsync = ref.watch(expiringSoonStudentsProvider);
+        return RefreshIndicator(
         color: AppColors.gold,
         onRefresh: () async {
           ref.invalidate(dashboardDataProvider);
@@ -295,7 +303,8 @@ class DashboardPage extends ConsumerWidget {
             const SizedBox(height: 32),
           ],
         ),
-      ),
+      );
+      },
     );
   }
 }

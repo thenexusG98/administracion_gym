@@ -63,7 +63,6 @@ class StudentsNotifier extends StateNotifier<AsyncValue<List<Student>>> {
 // ALUMNOS ACTIVOS COUNT
 // ═══════════════════════════════════════════
 final activeStudentsCountProvider = FutureProvider<int>((ref) async {
-  ref.watch(studentsProvider);
   return ref.read(studentRepositoryProvider).getActiveCount();
 });
 
@@ -71,7 +70,6 @@ final activeStudentsCountProvider = FutureProvider<int>((ref) async {
 // ALUMNOS POR VENCER
 // ═══════════════════════════════════════════
 final expiringSoonStudentsProvider = FutureProvider<List<Student>>((ref) async {
-  ref.watch(studentsProvider);
   return ref.read(studentRepositoryProvider).getExpiringSoon();
 });
 
