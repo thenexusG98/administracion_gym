@@ -117,6 +117,11 @@ class _StudentDetailPageState extends ConsumerState<StudentDetailPage> {
     ref.invalidate(activeStudentsCountProvider);
     await _loadStudent();
 
+    // Reprogramar notificaciones de pago
+    try {
+      await ref.read(notificationServiceProvider).schedulePaymentReminders();
+    } catch (_) {}
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

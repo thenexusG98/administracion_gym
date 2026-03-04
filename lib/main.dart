@@ -4,6 +4,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:valhalla_bjj/core/theme/app_theme.dart';
 import 'package:valhalla_bjj/core/router/app_router.dart';
 import 'package:valhalla_bjj/data/database/database_helper.dart';
+import 'package:valhalla_bjj/data/services/notification_service.dart';
 import 'package:valhalla_bjj/features/auth/presentation/pages/auth_gate_page.dart';
 
 void main() async {
@@ -19,6 +20,17 @@ void main() async {
     debugPrint('🚀 ✅ DB pre-inicializada OK');
   } catch (e) {
     debugPrint('🚀 ❌ Error pre-inicializando DB: $e');
+  }
+
+  // Inicializar servicio de notificaciones
+  debugPrint('🚀 Inicializando notificaciones...');
+  try {
+    await NotificationService().initialize();
+    // Programar recordatorios de pago
+    await NotificationService().schedulePaymentReminders();
+    debugPrint('🚀 ✅ Notificaciones OK');
+  } catch (e) {
+    debugPrint('🚀 ❌ Error en notificaciones: $e');
   }
 
   // Capturar errores de Flutter para debug

@@ -6,6 +6,7 @@ import 'package:valhalla_bjj/data/repositories/income_repository.dart';
 import 'package:valhalla_bjj/data/repositories/expense_repository.dart';
 import 'package:valhalla_bjj/data/repositories/inventory_repository.dart';
 import 'package:valhalla_bjj/data/services/google_sheets_service.dart';
+import 'package:valhalla_bjj/data/services/notification_service.dart';
 
 // ═══════════════════════════════════════════
 // DATABASE
@@ -49,3 +50,10 @@ final syncStatusProvider = StateProvider<SyncStatus>((ref) {
 });
 
 enum SyncStatus { idle, syncing, success, error }
+
+// ═══════════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════════
+final notificationServiceProvider = Provider<NotificationService>((ref) {
+  return NotificationService();
+});
