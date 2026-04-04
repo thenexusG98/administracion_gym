@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valhalla_bjj/core/theme/app_colors.dart';
+import 'package:valhalla_bjj/core/constants/app_constants.dart';
 import 'package:valhalla_bjj/core/models/student.dart';
 import 'package:valhalla_bjj/core/models/payment.dart';
 import 'package:valhalla_bjj/core/models/income.dart';
@@ -39,63 +40,115 @@ class _StudentDetailPageState extends ConsumerState<StudentDetailPage> {
   Future<void> _registerPayment() async {
     if (_student == null) return;
 
+    String selectedPlan = _student!.tipoPlan;
+    final montoController =
+        TextEditingController(text: _student!.monto.toStringAsFixed(2));
+
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Registrar Pago'),
-        content: Text(
-          '¿Registrar pago de ${Formatters.currency(_student!.monto)} para ${_student!.nombre}?',
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Registrar Pago'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _student!.nombre,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              const Text('Plan:'),
+              const SizedBox(height: 6),
+              DropdownButtonFormField<String>(
+                value: selectedPlan,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                items: AppConstants.planes
+                    .map((plan) => DropdownMenuItem(value: plan, child: Text(plan)))
+                    .toList(),
+                onChanged: (val) {
+                  if (val != null) setDialogState(() => selectedPlan = val);
+                },
+              ),
+              const SizedBox(height: 16),
+              const Text('Monto:'),
+              const SizedBox(height: 6),
+              TextField(
+                controller: montoController,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  prefixText: '\$',
+                  border: OutlineInputBorder(),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Registrar'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Registrar'),
-          ),
-        ],
       ),
     );
 
     if (confirmed != true) return;
 
+    final monto =
+        double.tryParse(montoController.text.trim()) ?? _student!.monto;
+
     final payment = Payment(
       studentId: _student!.id,
       studentName: _student!.nombre,
-      monto: _student!.monto,
+      monto: monto,
       fechaPago: DateTime.now(),
-      tipoPlan: _student!.tipoPlan,
+      tipoPlan: selectedPlan,
     );
 
     await ref.read(paymentRepositoryProvider).save(payment);
 
     // Registrar como ingreso
-    final categoriaIngreso = _student!.tipoPlan == 'Clase suelta'
+    final categoriaIngreso = selectedPlan == 'Clase suelta'
         ? 'Clases sueltas'
-        : 'Mensualidades';
-    final concepto = Formatters.paymentConcept(_student!.tipoPlan, DateTime.now());
+        : selectedPlan == 'Quincenal'
+            ? 'Quincenas'
+            : 'Mensualidades';
+    final concepto = Formatters.paymentConcept(selectedPlan, DateTime.now());
     final income = Income(
       categoria: categoriaIngreso,
       descripcion: '${_student!.nombre} - $concepto',
-      monto: _student!.monto,
+      monto: monto,
       fecha: DateTime.now(),
       referenceId: payment.id,
     );
     await ref.read(incomeRepositoryProvider).save(income);
 
-    // Actualizar alumno según tipo de plan
+    // Actualizar alumno: plan, monto y fecha de próximo pago
     Student updatedStudent;
-    switch (_student!.tipoPlan) {
+    switch (selectedPlan) {
       case 'Mensual':
         updatedStudent = _student!.copyWith(
+          tipoPlan: selectedPlan,
+          monto: monto,
           fechaProximoPago: DateTime.now().add(const Duration(days: 30)),
           estado: 'Activo',
         );
         break;
       case 'Quincenal':
         updatedStudent = _student!.copyWith(
+          tipoPlan: selectedPlan,
+          monto: monto,
           fechaProximoPago: DateTime.now().add(const Duration(days: 15)),
           estado: 'Activo',
         );
@@ -104,6 +157,8 @@ class _StudentDetailPageState extends ConsumerState<StudentDetailPage> {
       default:
         // Clase suelta: marcar como pagada hoy, próximo pago = hoy (ya pagó)
         updatedStudent = _student!.copyWith(
+          tipoPlan: selectedPlan,
+          monto: monto,
           fechaProximoPago: DateTime.now(),
           estado: 'Activo',
         );
