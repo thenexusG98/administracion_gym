@@ -286,15 +286,6 @@ class _MonthDetailPage extends ConsumerWidget {
                 const _SectionHeader(
                     title: 'Ingresos por categoría', color: AppColors.success),
                 const SizedBox(height: 8),
-                ...detail.incomesByCategory.entries
-                    .toList()
-                  ..sort((a, b) => b.value.compareTo(a.value))
-                  ..map((e) => _CategoryRow(
-                        name: e.key,
-                        amount: e.value,
-                        color: AppColors.success,
-                      ))
-                    .forEach((w) => w is Widget ? null : null),
                 for (final e in (detail.incomesByCategory.entries.toList()
                   ..sort((a, b) => b.value.compareTo(a.value))))
                   _CategoryRow(
