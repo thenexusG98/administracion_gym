@@ -41,6 +41,7 @@ class _StudentDetailPageState extends ConsumerState<StudentDetailPage> {
     if (_student == null) return;
 
     String selectedPlan = _student!.tipoPlan;
+    DateTime selectedDate = DateTime.now();
     final montoController =
         TextEditingController(text: _student!.monto.toStringAsFixed(2));
 
@@ -56,6 +57,40 @@ class _StudentDetailPageState extends ConsumerState<StudentDetailPage> {
               Text(
                 _student!.nombre,
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              const Text('Fecha de pago:'),
+              const SizedBox(height: 6),
+              InkWell(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: selectedDate,
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime.now(),
+                  );
+                  if (picked != null) {
+                    setDialogState(() => selectedDate = picked);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_today, size: 18, color: AppColors.gold),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${selectedDate.day.toString().padLeft(2, '0')}/'
+                        '${selectedDate.month.toString().padLeft(2, '0')}/'
+                        '${selectedDate.year}',
+                      ),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
               const Text('Plan:'),
@@ -112,7 +147,7 @@ class _StudentDetailPageState extends ConsumerState<StudentDetailPage> {
       studentId: _student!.id,
       studentName: _student!.nombre,
       monto: monto,
-      fechaPago: DateTime.now(),
+      fechaPago: selectedDate,
       tipoPlan: selectedPlan,
     );
 
@@ -124,12 +159,12 @@ class _StudentDetailPageState extends ConsumerState<StudentDetailPage> {
         : selectedPlan == 'Quincenal'
             ? 'Quincenas'
             : 'Mensualidades';
-    final concepto = Formatters.paymentConcept(selectedPlan, DateTime.now());
+    final concepto = Formatters.paymentConcept(selectedPlan, selectedDate);
     final income = Income(
       categoria: categoriaIngreso,
       descripcion: '${_student!.nombre} - $concepto',
       monto: monto,
-      fecha: DateTime.now(),
+      fecha: selectedDate,
       referenceId: payment.id,
     );
     await ref.read(incomeRepositoryProvider).save(income);
@@ -141,7 +176,7 @@ class _StudentDetailPageState extends ConsumerState<StudentDetailPage> {
         updatedStudent = _student!.copyWith(
           tipoPlan: selectedPlan,
           monto: monto,
-          fechaProximoPago: DateTime.now().add(const Duration(days: 30)),
+          fechaProximoPago: selectedDate.add(const Duration(days: 30)),
           estado: 'Activo',
         );
         break;
@@ -149,17 +184,17 @@ class _StudentDetailPageState extends ConsumerState<StudentDetailPage> {
         updatedStudent = _student!.copyWith(
           tipoPlan: selectedPlan,
           monto: monto,
-          fechaProximoPago: DateTime.now().add(const Duration(days: 15)),
+          fechaProximoPago: selectedDate.add(const Duration(days: 15)),
           estado: 'Activo',
         );
         break;
       case 'Clase suelta':
       default:
-        // Clase suelta: marcar como pagada hoy, próximo pago = hoy (ya pagó)
+        // Clase suelta: próximo pago = fecha de la clase
         updatedStudent = _student!.copyWith(
           tipoPlan: selectedPlan,
           monto: monto,
-          fechaProximoPago: DateTime.now(),
+          fechaProximoPago: selectedDate,
           estado: 'Activo',
         );
         break;

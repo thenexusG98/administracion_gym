@@ -65,6 +65,19 @@ class ExpenseRepository {
     return map;
   }
 
+  /// Returns a map of {year-month -> total} for all months that have expenses.
+  Future<Map<String, double>> getMonthlyTotals() async {
+    final result = await _db.rawQuery(
+      "SELECT strftime('%Y-%m', fecha) as ym, COALESCE(SUM(monto), 0) as total "
+      "FROM expenses GROUP BY ym ORDER BY ym DESC",
+    );
+    final map = <String, double>{};
+    for (final row in result) {
+      map[row['ym'] as String] = (row['total'] as num).toDouble();
+    }
+    return map;
+  }
+
   Future<void> save(Expense expense) async {
     await _db.insert('expenses', expense.toMap());
   }

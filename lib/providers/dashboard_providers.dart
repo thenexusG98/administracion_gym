@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:valhalla_bjj/core/models/income.dart';
+import 'package:valhalla_bjj/core/models/expense.dart';
 import 'package:valhalla_bjj/core/utils/date_extensions.dart';
 import 'package:valhalla_bjj/providers/providers.dart';
 
@@ -115,3 +117,89 @@ final dashboardDataProvider = FutureProvider<DashboardData>((ref) async {
     rethrow;
   }
 });
+
+// ═══════════════════════════════════════════
+// HISTORIAL MENSUAL
+// ═══════════════════════════════════════════
+
+class MonthSummary {
+  final int year;
+  final int month;
+  final double ingresos;
+  final double gastos;
+
+  MonthSummary({
+    required this.year,
+    required this.month,
+    required this.ingresos,
+    required this.gastos,
+  });
+
+  double get ganancia => ingresos - gastos;
+
+  /// Key string "YYYY-MM"
+  String get key => '$year-${month.toString().padLeft(2, '0')}';
+
+  DateTime get startDate => DateTime(year, month, 1);
+  DateTime get endDate => DateTime(year, month + 1, 0, 23, 59, 59);
+}
+
+final monthlyHistoryProvider = FutureProvider<List<MonthSummary>>((ref) async {
+  final incomeRepo = ref.read(incomeRepositoryProvider);
+  final expenseRepo = ref.read(expenseRepositoryProvider);
+
+  final incomeMap = await incomeRepo.getMonthlyTotals();
+  final expenseMap = await expenseRepo.getMonthlyTotals();
+
+  // Unir todas las claves de ambos mapas
+  final allKeys = <String>{...incomeMap.keys, ...expenseMap.keys}.toList()
+    ..sort((a, b) => b.compareTo(a)); // orden descendente
+
+  return allKeys.map((ym) {
+    final parts = ym.split('-');
+    return MonthSummary(
+      year: int.parse(parts[0]),
+      month: int.parse(parts[1]),
+      ingresos: incomeMap[ym] ?? 0,
+      gastos: expenseMap[ym] ?? 0,
+    );
+  }).toList();
+});
+
+final monthDetailProvider =
+    FutureProvider.family<_MonthDetail, String>((ref, ym) async {
+  final parts = ym.split('-');
+  final year = int.parse(parts[0]);
+  final month = int.parse(parts[1]);
+  final start = DateTime(year, month, 1);
+  final end = DateTime(year, month + 1, 0, 23, 59, 59);
+
+  final incomeRepo = ref.read(incomeRepositoryProvider);
+  final expenseRepo = ref.read(expenseRepositoryProvider);
+
+  final incomes = await incomeRepo.getByDateRange(start, end);
+  final expenses = await expenseRepo.getByDateRange(start, end);
+  final incomesByCategory = await incomeRepo.getTotalsByCategoria(start, end);
+  final expensesByCategory = await expenseRepo.getTotalsByCategoria(start, end);
+
+  return _MonthDetail(
+    incomes: incomes,
+    expenses: expenses,
+    incomesByCategory: incomesByCategory,
+    expensesByCategory: expensesByCategory,
+  );
+});
+
+class _MonthDetail {
+  final List<Income> incomes;
+  final List<Expense> expenses;
+  final Map<String, double> incomesByCategory;
+  final Map<String, double> expensesByCategory;
+
+  _MonthDetail({
+    required this.incomes,
+    required this.expenses,
+    required this.incomesByCategory,
+    required this.expensesByCategory,
+  });
+}

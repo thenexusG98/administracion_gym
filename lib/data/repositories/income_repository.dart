@@ -62,6 +62,20 @@ class IncomeRepository {
     return map;
   }
 
+  /// Returns a map of {year-month -> total} for all months that have incomes.
+  /// E.g. {'2026-03': 5400.0, '2026-04': 2100.0}
+  Future<Map<String, double>> getMonthlyTotals() async {
+    final result = await _db.rawQuery(
+      "SELECT strftime('%Y-%m', fecha) as ym, COALESCE(SUM(monto), 0) as total "
+      "FROM incomes GROUP BY ym ORDER BY ym DESC",
+    );
+    final map = <String, double>{};
+    for (final row in result) {
+      map[row['ym'] as String] = (row['total'] as num).toDouble();
+    }
+    return map;
+  }
+
   Future<void> save(Income income) async {
     await _db.insert('incomes', income.toMap());
   }

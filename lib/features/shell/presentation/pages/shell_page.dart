@@ -12,6 +12,7 @@ import 'package:valhalla_bjj/features/expenses/presentation/pages/expenses_page.
 import 'package:valhalla_bjj/features/inventory/presentation/pages/inventory_page.dart';
 import 'package:valhalla_bjj/features/timer/presentation/pages/fight_timer_page.dart';
 import 'package:valhalla_bjj/features/receipts/presentation/pages/receipts_page.dart';
+import 'package:valhalla_bjj/features/reports/presentation/pages/monthly_history_page.dart';
 
 class ShellPage extends ConsumerStatefulWidget {
   const ShellPage({super.key});
@@ -346,6 +347,36 @@ class _ShellPageState extends ConsumerState<ShellPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const ReceiptsPage()),
+                );
+              },
+            ),
+
+            const Divider(color: AppColors.divider, height: 1, indent: 20, endIndent: 20),
+
+            // Historial mensual
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.info.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.bar_chart, color: AppColors.info, size: 22),
+              ),
+              title: const Text(
+                'Historial Mensual',
+                style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w500),
+              ),
+              subtitle: const Text(
+                'Ingresos y gastos por mes',
+                style: TextStyle(color: AppColors.textHint, fontSize: 12),
+              ),
+              trailing: const Icon(Icons.chevron_right, color: AppColors.textHint),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MonthlyHistoryPage()),
                 );
               },
             ),
