@@ -6,6 +6,9 @@ import 'package:valhalla_bjj/core/utils/formatters.dart';
 import 'package:valhalla_bjj/providers/inventory_providers.dart';
 import 'package:valhalla_bjj/features/inventory/presentation/pages/product_form_page.dart';
 import 'package:valhalla_bjj/features/inventory/presentation/pages/sell_product_page.dart';
+import 'package:valhalla_bjj/features/inventory/presentation/pages/create_layaway_page.dart';
+import 'package:valhalla_bjj/features/inventory/presentation/pages/layaways_list_page.dart';
+import 'package:valhalla_bjj/providers/layaway_providers.dart';
 import 'package:valhalla_bjj/shared/widgets/common_widgets.dart';
 
 class InventoryPage extends ConsumerWidget {
@@ -20,6 +23,42 @@ class InventoryPage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('🥋 Inventario'),
         actions: [
+          // Badge de apartados pendientes
+          Consumer(
+            builder: (context, ref, _) {
+              final pendingAsync = ref.watch(pendingLayawaysProvider);
+              final count = pendingAsync.maybeWhen(data: (l) => l.length, orElse: () => 0);
+              return Stack(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.bookmarks_outlined),
+                    tooltip: 'Ver apartados',
+                    onPressed: () => _navigateToLayaways(context),
+                  ),
+                  if (count > 0)
+                    Positioned(
+                      right: 6,
+                      top: 6,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: const BoxDecoration(
+                          color: AppColors.warning,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          '$count',
+                          style: const TextStyle(
+                            color: AppColors.black,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.add_circle),
             onPressed: () => _navigateToForm(context),
@@ -90,6 +129,7 @@ class InventoryPage extends ConsumerWidget {
                       onTap: () => _navigateToSell(context, product),
                       onEdit: () => _navigateToForm(context, product.id),
                       onDelete: () => _deleteProduct(context, ref, product),
+                      onLayaway: () => _navigateToLayaway(context, product),
                     ),
                   )),
             ],
@@ -118,6 +158,20 @@ class InventoryPage extends ConsumerWidget {
     );
   }
 
+  void _navigateToLayaway(BuildContext context, Product product) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => CreateLayawayPage(productId: product.id)),
+    );
+  }
+
+  void _navigateToLayaways(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const LayawaysListPage()),
+    );
+  }
+
   Future<void> _deleteProduct(BuildContext context, WidgetRef ref, Product product) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -140,21 +194,24 @@ class InventoryPage extends ConsumerWidget {
   }
 }
 
-class _ProductCard extends StatelessWidget {
+class _ProductCard extends ConsumerWidget {
   final Product product;
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback onLayaway;
 
   const _ProductCard({
     required this.product,
     required this.onTap,
     required this.onEdit,
     required this.onDelete,
+    required this.onLayaway,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final layawaysAsync = ref.watch(layawaysByProductProvider(product.id));
     return ValhallaCard(
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -230,6 +287,69 @@ class _ProductCard extends StatelessWidget {
               _priceColumn('Ganancia', product.ganancia, AppColors.success),
             ],
           ),
+          // Apartados pendientes para este producto
+          layawaysAsync.maybeWhen(
+            data: (layaways) {
+              if (layaways.isEmpty) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.gold.withOpacity(0.25)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.bookmark, color: AppColors.gold, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Apartado${layaways.length > 1 ? 's (${layaways.length})' : ''}',
+                            style: const TextStyle(
+                              color: AppColors.gold,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      ...layaways.map((l) => Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Row(
+                              children: [
+                                const SizedBox(width: 18),
+                                Expanded(
+                                  child: Text(
+                                    '• ${l.clienteNombre}${l.clienteTelefono != null ? '  ${l.clienteTelefono}' : ''}',
+                                    style: const TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  'Saldo: ${Formatters.currency(l.saldo)}',
+                                  style: const TextStyle(
+                                    color: AppColors.warning,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )),
+                    ],
+                  ),
+                ),
+              );
+            },
+            orElse: () => const SizedBox.shrink(),
+          ),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -243,9 +363,8 @@ class _ProductCard extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Expanded(
-                flex: 2,
                 child: ElevatedButton.icon(
                   onPressed: product.stock > 0 ? onTap : null,
                   icon: const Icon(Icons.sell, size: 16),
@@ -255,7 +374,20 @@ class _ProductCard extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: product.stock > 0 ? onLayaway : null,
+                  icon: const Icon(Icons.bookmark_add, size: 16),
+                  label: const Text('Apartar'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    foregroundColor: AppColors.gold,
+                    side: const BorderSide(color: AppColors.gold),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
               IconButton(
                 onPressed: onDelete,
                 icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),

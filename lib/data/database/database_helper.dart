@@ -43,7 +43,7 @@ class DatabaseHelper {
     debugPrint('🗄️ Abriendo DB...');
     final db = await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -59,7 +59,7 @@ class DatabaseHelper {
     // Si faltan tablas, recrear
     if (!tableNames.contains('students') || !tableNames.contains('incomes')) {
       debugPrint('🗄️ ⚠️ Tablas faltantes, recreando...');
-      await _onCreate(db, 1);
+      await _onCreate(db, 2);
     }
 
     debugPrint('🗄️ DB lista');
@@ -201,13 +201,84 @@ class DatabaseHelper {
     batch.execute('CREATE INDEX IF NOT EXISTS idx_attendance_student ON attendance(student_id)');
     batch.execute('CREATE INDEX IF NOT EXISTS idx_attendance_fecha ON attendance(fecha)');
 
+    batch.execute('''
+      CREATE TABLE IF NOT EXISTS product_layaways (
+        id TEXT PRIMARY KEY,
+        product_id TEXT NOT NULL,
+        product_name TEXT NOT NULL,
+        cliente_nombre TEXT NOT NULL,
+        cliente_telefono TEXT,
+        cantidad INTEGER NOT NULL DEFAULT 1,
+        precio_unitario REAL NOT NULL,
+        precio_total REAL NOT NULL,
+        monto_abonado REAL NOT NULL DEFAULT 0,
+        estado TEXT NOT NULL DEFAULT 'Pendiente',
+        fecha TEXT NOT NULL,
+        notas TEXT,
+        created_at TEXT NOT NULL,
+        synced INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (product_id) REFERENCES products (id)
+      )
+    ''');
+
+    batch.execute('''
+      CREATE TABLE IF NOT EXISTS abonos_producto (
+        id TEXT PRIMARY KEY,
+        layaway_id TEXT NOT NULL,
+        monto REAL NOT NULL,
+        fecha TEXT NOT NULL,
+        notas TEXT,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (layaway_id) REFERENCES product_layaways (id) ON DELETE CASCADE
+      )
+    ''');
+
+    batch.execute('CREATE INDEX IF NOT EXISTS idx_layaways_product ON product_layaways(product_id)');
+    batch.execute('CREATE INDEX IF NOT EXISTS idx_layaways_estado ON product_layaways(estado)');
+    batch.execute('CREATE INDEX IF NOT EXISTS idx_abonos_layaway ON abonos_producto(layaway_id)');
+
     debugPrint('🗄️ Ejecutando batch de creación...');
     await batch.commit(noResult: true);
     debugPrint('🗄️ ✅ Tablas creadas OK');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Future migrations here
+    if (oldVersion < 2) {
+      // v2: Apartados/anticipos de productos
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS product_layaways (
+          id TEXT PRIMARY KEY,
+          product_id TEXT NOT NULL,
+          product_name TEXT NOT NULL,
+          cliente_nombre TEXT NOT NULL,
+          cliente_telefono TEXT,
+          cantidad INTEGER NOT NULL DEFAULT 1,
+          precio_unitario REAL NOT NULL,
+          precio_total REAL NOT NULL,
+          monto_abonado REAL NOT NULL DEFAULT 0,
+          estado TEXT NOT NULL DEFAULT 'Pendiente',
+          fecha TEXT NOT NULL,
+          notas TEXT,
+          created_at TEXT NOT NULL,
+          synced INTEGER NOT NULL DEFAULT 0,
+          FOREIGN KEY (product_id) REFERENCES products (id)
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS abonos_producto (
+          id TEXT PRIMARY KEY,
+          layaway_id TEXT NOT NULL,
+          monto REAL NOT NULL,
+          fecha TEXT NOT NULL,
+          notas TEXT,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (layaway_id) REFERENCES product_layaways (id) ON DELETE CASCADE
+        )
+      ''');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_layaways_product ON product_layaways(product_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_layaways_estado ON product_layaways(estado)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_abonos_layaway ON abonos_producto(layaway_id)');
+    }
   }
 
   // ═══════════════════════════════════════════

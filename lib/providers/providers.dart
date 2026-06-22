@@ -5,6 +5,7 @@ import 'package:valhalla_bjj/data/repositories/payment_repository.dart';
 import 'package:valhalla_bjj/data/repositories/income_repository.dart';
 import 'package:valhalla_bjj/data/repositories/expense_repository.dart';
 import 'package:valhalla_bjj/data/repositories/inventory_repository.dart';
+import 'package:valhalla_bjj/data/repositories/layaway_repository.dart';
 import 'package:valhalla_bjj/data/services/google_sheets_service.dart';
 import 'package:valhalla_bjj/data/services/notification_service.dart';
 
@@ -36,6 +37,10 @@ final expenseRepositoryProvider = Provider<ExpenseRepository>((ref) {
 
 final inventoryRepositoryProvider = Provider<InventoryRepository>((ref) {
   return InventoryRepository(ref.watch(databaseProvider));
+});
+
+final layawayRepositoryProvider = Provider<LayawayRepository>((ref) {
+  return LayawayRepository(ref.watch(databaseProvider));
 });
 
 // ═══════════════════════════════════════════
