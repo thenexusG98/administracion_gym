@@ -13,6 +13,7 @@ import 'package:valhalla_bjj/features/inventory/presentation/pages/inventory_pag
 import 'package:valhalla_bjj/features/timer/presentation/pages/fight_timer_page.dart';
 import 'package:valhalla_bjj/features/receipts/presentation/pages/receipts_page.dart';
 import 'package:valhalla_bjj/features/reports/presentation/pages/monthly_history_page.dart';
+import 'package:valhalla_bjj/features/sync/presentation/pages/google_sheets_page.dart';
 
 class ShellPage extends ConsumerStatefulWidget {
   const ShellPage({super.key});
@@ -41,19 +42,48 @@ class _ShellPageState extends ConsumerState<ShellPage> {
   ];
 
   Future<void> _syncToSheets() async {
+    final sheetsService = ref.read(googleSheetsServiceProvider);
+
+    // Si no está conectado, intentar sign-in silencioso o abrir la página
+    if (!sheetsService.isInitialized) {
+      final silent = await sheetsService.initialize();
+      if (!silent) {
+        // No hay sesión guardada → llevar al usuario a la página de configuración
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Conecta tu cuenta de Google para sincronizar'),
+              backgroundColor: AppColors.warning,
+              action: SnackBarAction(
+                label: 'Configurar',
+                textColor: AppColors.black,
+                onPressed: () => _openSheetsPage(),
+              ),
+            ),
+          );
+        }
+        return;
+      }
+    }
+
     final syncStatus = ref.read(syncStatusProvider.notifier);
     syncStatus.state = SyncStatus.syncing;
 
     try {
-      final sheetsService = ref.read(googleSheetsServiceProvider);
       final result = await sheetsService.syncAll();
 
       if (mounted) {
-        syncStatus.state = SyncStatus.success;
+        syncStatus.state =
+            result.success ? SyncStatus.success : SyncStatus.error;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✅ Sincronizado: ${result.syncedCount} registros'),
-            backgroundColor: AppColors.success,
+            content: Text(
+              result.success
+                  ? '✅ Sincronizado: ${result.syncedCount} registros'
+                  : result.message,
+            ),
+            backgroundColor:
+                result.success ? AppColors.success : AppColors.error,
           ),
         );
       }
@@ -72,9 +102,16 @@ class _ShellPageState extends ConsumerState<ShellPage> {
     // Reset status after delay
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
-        syncStatus.state = SyncStatus.idle;
+        ref.read(syncStatusProvider.notifier).state = SyncStatus.idle;
       }
     });
+  }
+
+  void _openSheetsPage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const GoogleSheetsPage()),
+    );
   }
 
   @override
@@ -378,6 +415,33 @@ class _ShellPageState extends ConsumerState<ShellPage> {
                   context,
                   MaterialPageRoute(builder: (_) => const MonthlyHistoryPage()),
                 );
+              },
+            ),
+
+            const Divider(color: AppColors.divider, height: 1, indent: 20, endIndent: 20),
+
+            // Google Sheets
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.table_chart, color: AppColors.success, size: 22),
+              ),
+              title: const Text(
+                'Google Sheets',
+                style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w500),
+              ),
+              subtitle: const Text(
+                'Configurar sincronización',
+                style: TextStyle(color: AppColors.textHint, fontSize: 12),
+              ),
+              trailing: const Icon(Icons.chevron_right, color: AppColors.textHint),
+              onTap: () {
+                Navigator.pop(context);
+                _openSheetsPage();
               },
             ),
 

@@ -11,6 +11,7 @@ import 'package:valhalla_bjj/features/inventory/presentation/pages/product_form_
 import 'package:valhalla_bjj/features/inventory/presentation/pages/sell_product_page.dart';
 import 'package:valhalla_bjj/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:valhalla_bjj/features/shell/presentation/pages/shell_page.dart';
+import 'package:valhalla_bjj/features/sync/presentation/pages/google_sheets_page.dart';
 
 class AppRouter {
   AppRouter._();
@@ -28,6 +29,7 @@ class AppRouter {
   static const String inventory = '/inventory';
   static const String productForm = '/inventory/form';
   static const String sellProduct = '/inventory/sell';
+  static const String googleSheets = '/settings/google-sheets';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -61,6 +63,8 @@ class AppRouter {
       case sellProduct:
         final productId = settings.arguments as String;
         return _buildRoute(SellProductPage(productId: productId), settings);
+      case googleSheets:
+        return _buildRoute(const GoogleSheetsPage(), settings);
       default:
         return _buildRoute(const ShellPage(), settings);
     }
